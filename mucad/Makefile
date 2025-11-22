@@ -10,15 +10,14 @@ CFLAGS := -Wall -Wextra -Wpedantic -fPIC -flto \
           -I . -O3 -mtune=native \
           -I/usr/include/opencascade
 
-LIBS := -lTKernel -lTKMath -lTKPrim \
-		-lTKGeomBase -lTKGeomAlgo -lTKBRep -lTKTopAlgo \
-		-lTKOffset -lTKBool -lTKShHealing \
-		-lTKMesh -lTKSTEP -lTKSTEPAttr -lTKSTL -lTKIGES -lTKG3d -lTKBO \
-		-lTKernel -lTKMath -lTKPrim -lTKGeomBase -lTKGeomAlgo -lTKBRep -lTKTopAlgo -lTKOffset -lTKBool -lTKShHealing -lTKMesh -lTKSTEP -lTKSTEPAttr -lTKSTL -lTKIGES -lTKG3d -lTKBO \
-		-lstdc++ 
+LIBS := -lTKernel -lTKMath -lTKPrim -lTKGeomBase -lTKGeomAlgo \
+	-lTKBRep -lTKTopAlgo -lTKOffset -lTKBool -lTKShHealing \
+	-lTKMesh -lTKSTEP -lTKSTEPAttr -lTKSTL -lTKIGES -lTKG3d \
+	-lTKBO -lstdc++ 
 
 CEXE := -fuse-ld=lld -Wl,-gc-sections,-icf=safe,-s $(LIBS)
-LDFLAGS := -fuse-ld=lld -static-libstdc++
+LDFLAGS := -fuse-ld=lld 
+# -static-libstdc++
 
 ARCH ?= $(shell arch)
 
@@ -52,17 +51,19 @@ build/test_box: test/test_box.c build/libmucad.a
 build/test_loft: test/test_loft.c build/libmucad.a
 	$(CC) -std=c11 $(CFLAGS) $(CEXE) -o $@ $^
 
-
 build/test_basic: test/test_basic.c build/libmucad.a
 	$(CC) -std=c11 $(CFLAGS) $(CEXE) -o $@ $^
 
 
-compile_commands.json: Makefile $(SOURCE)
+compile_commands.json: Makefile mucad.cpp mucad_c.cpp test/test_box.c test/test_loft.c test/test_basic.c
 	@echo '[\n' \
-	'{"directory":"$(PWD)","command":"$(CXX) -c $(CFLAGS) $(SOURCE) -o build/mucad.o","file":"$(SOURCE)"},\n' \
-	'{"directory":"$(PWD)","command":"$(CXX) -shared -o build/libmucad.so build/mucad.o $(LDFLAGS)","file":"build/libmucad.so"},\n' \
-	'{"directory":"$(PWD)","command":"$(AR) rcs build/libmucad.a build/mucad.o","file":"build/libmucad.a"},\n' \
-	'{"directory":"$(PWD)","command":"$(CXX) $(CFLAGS) $(CEXE) -o build/test test.c build/libmucad.a -fuse-ld=lld -Wl,-gc-sections,-icf=safe","file":"test.c"}\n]' \
+	'{"directory":"$(PWD)","command":"$(CXX) -c $(CFLAGS) mucad.cpp -o build/mucad.o","file":"mucad.cpp"},\n' \
+	'{"directory":"$(PWD)","command":"$(CXX) -c $(CFLAGS) mucad_c.cpp -o build/mucad_c.o","file":"mucad_c.cpp"},\n' \
+	'{"directory":"$(PWD)","command":"$(CXX) -shared -o build/libmucad.so build/mucad.o build/mucad_c.o $(LDFLAGS)","file":"build/libmucad.so"},\n' \
+	'{"directory":"$(PWD)","command":"$(AR) rcs build/libmucad.a build/mucad.o build/mucad_c.o","file":"build/libmucad.a"},\n' \
+	'{"directory":"$(PWD)","command":"$(CC) -std=c11 $(CFLAGS) $(CEXE) -o build/test_box test/test_box.c build/libmucad.a","file":"test/test_box.c"},\n' \
+	'{"directory":"$(PWD)","command":"$(CC) -std=c11 $(CFLAGS) $(CEXE) -o build/test_loft test/test_loft.c build/libmucad.a","file":"test/test_loft.c"},\n' \
+	'{"directory":"$(PWD)","command":"$(CC) -std=c11 $(CFLAGS) $(CEXE) -o build/test_basic test/test_basic.c build/libmucad.a","file":"test/test_basic.c"}\n]' \
 	> $@
 
 install:
@@ -80,13 +81,14 @@ uninstall:
 	sudo ldconfig
 
 format:
-	clang-format -style=file -i $$(find . -type f \( -name '*.c' -o -name '*.h' \))
+	clang-format -style=file -i $$(find . -type f \( -name '*.c' -o -name '*.h' -o -name '*.cpp' -o -name '*.hpp' \))
 
 clean:
 	rm -rf build
 
-check: build/test_basic build/test_box
+check: build/test_basic build/test_box build/test_loft
 	./build/test_box
+	./build/test_loft
 	./build/test_basic
 
 .PHONY: all clean check install uninstall format

@@ -1,20 +1,27 @@
-CC := clang++
-AR := llvm-ar
-TARGET := normal
+CXX := clang++
+CC=clang
+AR := llvm-ar-18
 PREFIX ?= /usr/local
 
-CFLAGS := -Wall -Wextra -Wpedantic -Werror -fPIC -flto \
+# TARGET
+CFLAGS := -Wall -Wextra -Wpedantic -fPIC -flto \
           -ffunction-sections -fdata-sections \
-          -fno-stack-protector -D_FORTIFY_SOURCE=0 \
-          -I . -O3 -mtune=native
-CEXE := -fuse-ld=lld -Wl,-gc-sections,-icf=safe,-s
-LDFLAGS := -fuse-ld=lld
+          -fstack-protector-all -D_FORTIFY_SOURCE=3 \
+          -I . -O3 -mtune=native \
+          -I/usr/include/opencascade
 
-ifeq ($(TARGET),embedded)
-    SOURCE := mucad_embedded.c
-else
-    SOURCE := mucad.c
-endif
+LIBS := -lTKernel -lTKMath -lTKPrim \
+		-lTKGeomBase -lTKGeomAlgo -lTKBRep -lTKTopAlgo \
+		-lTKOffset -lTKBool -lTKShHealing \
+		-lTKMesh -lTKSTEP -lTKSTEPAttr -lTKSTL -lTKIGES -lTKG3d -lTKBO \
+		-lTKernel -lTKMath -lTKPrim -lTKGeomBase -lTKGeomAlgo -lTKBRep -lTKTopAlgo -lTKOffset -lTKBool -lTKShHealing -lTKMesh -lTKSTEP -lTKSTEPAttr -lTKSTL -lTKIGES -lTKG3d -lTKBO \
+		-lstdc++ 
+
+CEXE := -fuse-ld=lld -Wl,-gc-sections,-icf=safe,-s $(LIBS)
+LDFLAGS := -fuse-ld=lld -static-libstdc++
+
+ARCH ?= $(shell arch)
+
 
 ifeq ($(ARCH),x86_64)
     CFLAGS += -march=native
@@ -25,28 +32,33 @@ endif
 
 all: build/libmucad.so build/libmucad.a
 
-build/libmucad.so: build/mucad.o
-	$(CC) -shared -o $@ $< $(LDFLAGS)
+build/libmucad.so: build/mucad.o build/mucad_c.o
+	$(CXX) -shared -o $@ $^ $(LDFLAGS)
 
-build/libmucad.a: build/mucad.o
-	$(AR) rcs $@ $<
+build/libmucad.a: build/mucad.o build/mucad_c.o
+	$(AR) rcs $@ $^
 
-build/mucad.o: $(SOURCE)
+build/mucad.o: mucad.cpp
 	mkdir -p build
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CXX) -c $(CFLAGS) $^ -o $@
 
-build/test: test.c build/libmucad.a
-	$(CC) $(CFLAGS) $(CEXE) -o $@ test.c build/libmucad.a
+build/mucad_c.o: mucad_c.cpp
+	mkdir -p build
+	$(CXX) -c $(CFLAGS) $^ -o $@
 
-build/test_all: test_all.c build/libmucad.a
-	$(CC) $(CFLAGS) $(CEXE) -o $@ test_all.c build/libmucad.a
+build/test_box: test/test_box.c build/libmucad.a
+	$(CC) -std=c11 $(CFLAGS) $(CEXE) -o $@ $^
+
+build/test_basic: test/test_basic.c build/libmucad.a
+	$(CC) -std=c11 $(CFLAGS) $(CEXE) -o $@ $^
+
 
 compile_commands.json: Makefile $(SOURCE)
 	@echo '[\n' \
-	'{"directory":"$(PWD)","command":"$(CC) -c $(CFLAGS) $(SOURCE) -o build/mucad.o","file":"$(SOURCE)"},\n' \
-	'{"directory":"$(PWD)","command":"$(CC) -shared -o build/libmucad.so build/mucad.o $(LDFLAGS)","file":"build/libmucad.so"},\n' \
+	'{"directory":"$(PWD)","command":"$(CXX) -c $(CFLAGS) $(SOURCE) -o build/mucad.o","file":"$(SOURCE)"},\n' \
+	'{"directory":"$(PWD)","command":"$(CXX) -shared -o build/libmucad.so build/mucad.o $(LDFLAGS)","file":"build/libmucad.so"},\n' \
 	'{"directory":"$(PWD)","command":"$(AR) rcs build/libmucad.a build/mucad.o","file":"build/libmucad.a"},\n' \
-	'{"directory":"$(PWD)","command":"$(CC) $(CFLAGS) $(CEXE) -o build/test test.c build/libmucad.a -fuse-ld=lld -Wl,-gc-sections,-icf=safe","file":"test.c"}\n]' \
+	'{"directory":"$(PWD)","command":"$(CXX) $(CFLAGS) $(CEXE) -o build/test test.c build/libmucad.a -fuse-ld=lld -Wl,-gc-sections,-icf=safe","file":"test.c"}\n]' \
 	> $@
 
 install:

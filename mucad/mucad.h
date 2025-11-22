@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+#include <stddef.h>
+
 /* Opaque handle - the implementation keeps it as a TopoDS_Shape* */
 typedef void* Shape;
 
@@ -28,16 +30,11 @@ Shape mucad_rotate(Shape s,double ax,double ay,double az,
 Shape mucad_scale(Shape s,double sx,double sy,double sz);
 Shape mucad_mirror(Shape s,double ax,double ay,double az,
                    double ux,double uy,double uz);
-Shape mucad_transform(Shape s,const double mat[12]);
+Shape mucad_transform(Shape s,const double mat[16]);
 
 /* ---- boolean / set ops ---------------------------------------------- */
 Shape mucad_union(Shape a,Shape b);
 Shape mucad_difference(Shape a,Shape b);
-Shape mucad_intersection(Shape a,Shape b);
-Shape mucad_symdiff(Shape a,Shape b);
-Shape mucad_union_many(const Shape* shapes,size_t n);
-Shape mucad_difference_many(Shape base,const Shape* sub,size_t n);
-Shape mucad_intersection_many(const Shape* shapes,size_t n);
 
 /* ---- extrude / sweep / revolve / loft -------------------------------- */
 Shape mucad_extrude(Shape shape2d,double ux,double uy,double uz);
@@ -45,31 +42,38 @@ Shape mucad_sweep(Shape profile,double x0,double y0,double z0,
                   double x1,double y1,double z1);
 Shape mucad_revolve(Shape s,double ax,double ay,double az,
                     double ux,double uy,double uz,double angle);
-Shape mucad_loft(const Shape* shapes,size_t n,bool solid,bool ruled);
+Shape mucad_loft(const Shape* shapes,size_t n, int solid, int ruled);
 
 /* ---- advanced primitives --------------------------------------------- */
-Shape mucad_catmull_rom_wire(const double* pts,size_t npts,
-                            double tension,bool closed,bool lineClose);
 Shape mucad_quadratic_spline_wire(const double* pts,size_t npts);
 Shape mucad_face_from_wire(Shape wire);
 
 /* ---- mesh / export --------------------------------------------------- */
-int mucad_mesh(Shape s,double deflection);
 int mucad_write_step(Shape s,const char* filename);
 int mucad_write_stl(Shape s,const char* filename);
 int mucad_write_iges(Shape s,const char* filename);
 int mucad_write_obj(Shape s,const char* filename);
 
 /* ---- analysis / diagnostics ------------------------------------------- */
-int mucad_bounding_box(Shape s,double* minx,double* miny,double* minz,
-                       double* maxx,double* maxy,double* maxz);
+int mucad_bounding_sphere(Shape s, double* x, double* y, double* z,
+        double* r);
 double mucad_volume(Shape s);
 double mucad_surface_area(Shape s);
 int mucad_centroid(Shape s,double* cx,double* cy,double* cz);
 int mucad_inertia(Shape s,double density,
                   double* Ixx,double* Iyy,double* Izz);
+
+// Enumerator
+// 1 TopAbs_COMPOUND     
+// 2 TopAbs_COMPSOLID    
+// 3 TopAbs_SOLID    
+// 4 TopAbs_SHELL    
+// 5 TopAbs_FACE     
+// 6 TopAbs_WIRE     
+// 7 TopAbs_EDGE     
+// 8 TopAbs_VERTEX   
+// 9 TopAbs_SHAPE 
 int mucad_shape_type(Shape s); // enum: 0=WIRE,1=FACE,2=SHELL,3=SOLID,4=COMPOUND
-const char* mucad_last_error(void);
 
 /* ---- cleanup -------------------------------------------------------- */
 void mucad_free(Shape s);

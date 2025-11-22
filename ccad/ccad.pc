@@ -1,0 +1,15 @@
+# ccad.pc - pkg-config descriptor for the ccad library
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: ccad
+Description: C++ library for CAD operations
+Version: 0.1
+
+# 1) Header search path
+Cflags: -I${includedir}
+
+# 2) Linker flags
+Libs: -L${libdir} -lccad -lTKernel -lTKMath -lTKPrim -lTKGeomBase -lTKGeomAlgo -lTKBRep -lTKTopAlgo -lTKOffset -lTKBool -lTKShHealing  -lTKMesh -lTKSTEP -lTKSTEPAttr -lTKSTL -lTKIGES -lTKG3d  -lTKBO -lstdc++ -lm

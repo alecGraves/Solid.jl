@@ -1,22 +1,25 @@
 CXX := clang++
-CC=clang
-AR := llvm-ar-18
+CC = clang
+AR := llvm-ar
+LD=lld
 PREFIX ?= /usr/local
 
 # TARGET
 CFLAGS := -Wall -Wextra -Wpedantic -fPIC -flto \
           -ffunction-sections -fdata-sections \
           -fstack-protector-all -D_FORTIFY_SOURCE=3 \
-          -I . -O3 -mtune=native \
+          -I . -Os -mtune=native \
           -I/usr/include/opencascade
 
-LIBS := -lTKernel -lTKMath -lTKPrim -lTKGeomBase -lTKGeomAlgo \
+CLIBS := -lTKernel -lTKMath -lTKPrim -lTKGeomBase -lTKGeomAlgo \
 	-lTKBRep -lTKTopAlgo -lTKOffset -lTKBool -lTKShHealing \
 	-lTKMesh -lTKSTEP -lTKSTEPAttr -lTKSTL -lTKIGES -lTKG3d \
-	-lTKBO -lstdc++ 
+	-lTKBO -lstdc++ -lm
 
-CEXE := -fuse-ld=lld -Wl,-gc-sections,-icf=safe,-s $(LIBS)
-LDFLAGS := -fuse-ld=lld 
+CEXE :=  -Wl,-gc-sections,-s $(CLIBS) -fuse-ld=$(LD)
+# -fuse-ld=lld
+
+LDFLAGS := -fuse-ld=$(LD)
 # -static-libstdc++
 
 ARCH ?= $(shell arch)
@@ -46,13 +49,13 @@ build/ccad_c.o: ccad_c.cpp
 	$(CXX) -c $(CFLAGS) $^ -o $@
 
 build/test_box: test/test_box.c build/libccad.a
-	$(CC) -std=c11 $(CFLAGS) $(CEXE) -o $@ $^
+	$(CC) -o $@ $^ -std=c11 $(CFLAGS) $(CEXE) 
 
 build/test_loft: test/test_loft.c build/libccad.a
-	$(CC) -std=c11 $(CFLAGS) $(CEXE) -o $@ $^
+	$(CC) -o $@ $^ -std=c11 $(CFLAGS) $(CEXE) 
 
 build/test_basic: test/test_basic.c build/libccad.a
-	$(CC) -std=c11 $(CFLAGS) $(CEXE) -o $@ $^
+	$(CC) -o $@ $^ -std=c11 $(CFLAGS) $(CEXE) 
 
 
 compile_commands.json: Makefile ccad.cpp ccad_c.cpp test/test_box.c test/test_loft.c test/test_basic.c
@@ -69,15 +72,18 @@ compile_commands.json: Makefile ccad.cpp ccad_c.cpp test/test_box.c test/test_lo
 install:
 	mkdir -p $(PREFIX)/lib
 	mkdir -p $(PREFIX)/include
+	mkdir -p $(PREFIX)/lib/pkgconfig
 	install -m 0644 build/libccad.so $(PREFIX)/lib/
 	install -m 0644 build/libccad.a $(PREFIX)/lib/
 	install -m 0644 ccad.h $(PREFIX)/include/
+	install -m 0644 ccad.pc $(PREFIX)/lib/pkgconfig
 	sudo ldconfig
 
 uninstall:
 	rm -f $(PREFIX)/lib/libccad.so
 	rm -f $(PREFIX)/lib/libccad.a
 	rm -f $(PREFIX)/include/ccad.h
+	rm -f $(PREFIX)/lib/pkgconfig/ccad.pc
 	sudo ldconfig
 
 format:
@@ -85,6 +91,8 @@ format:
 
 clean:
 	rm -rf build
+	rm -f loft.stl
+	rm -f box.iges box.step box.stl box.obj
 
 check: build/test_basic build/test_box build/test_loft
 	./build/test_box

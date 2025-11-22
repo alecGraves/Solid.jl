@@ -6,9 +6,14 @@ It was created to enable me to easily make better CAD files using a parametric c
 
 I also hope to use it in FEM and topology optimization.
 
+## Examples
+![3d golden cube rendered STL file](assets/cube.png "cube.stl")
+![box STEP file](assets/box.png "box.png")
+![loft STL file](assets/loft.png "loft.png")
+
 ## Usage
 
-You can use mucad by creating primitives and 
+You can use ccad by creating primitives and 
 ```C
 #include "mucad.h"
 #include <stdio.h>
@@ -26,14 +31,51 @@ int main(void) {
 }
 ```
 
+Compiling (using a test as an example):
+
+```sh
+gcc -o box test/test_box.c $(pkg-config --cflags --libs ccad)
+./box
+```
+
+output:
+```
+Box written successfully to 'box.stl'.
+...
+Box written successfully to 'box.step'.
+Box written successfully to 'box.obj'.
+Box written successfully to 'box.iges'.
+```
+
+You can view with `f3d`
+```
+f3d box.step
+```
 
 ## Installation
-mucad is a wrapper around Open CASCADE, like CadQuery. But smaller/faster/etc.
+```
+make
+make check
+sudo make install
+```
 
-## Why "gigacad"?
-mucad was taken, as was picocad, femtocad, microcad, megacad, etc.
+or llvm
+```
+make CC=clang CXX=clang++ AR=llvm-ar LD=lld
+make check CC=clang CXX=clang++ AR=llvm-ar LD=lld
+sudo make install
+```
 
-When I searched for gigacad, I did not find any CAD prorgams, so here we are.
+## Uninstall
+
+```
+sudo make uninstall
+```
+
+## Why "ccad"?
+ccad enables constructive solid geometry (CSG) modeling, and it is compatible with the C ABI, so I named it ccad.
+
+It is written in C++ and uses Open CASCADE, a C++ library, but "cppcad" just doesn't have the same ring. the name "microcad" was already taken as well.
 
 ## TODO
-- [ ] static lib of Open CASCADE
+- [ ] static lib of Open CASCADE instructions

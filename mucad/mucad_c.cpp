@@ -175,9 +175,9 @@ int mucad_write_step(Shape s, const char* filename)
     return mucadcpp_write_step(s, filename);
 }
 
-int mucad_write_stl(Shape s, const char* filename)
+int mucad_write_stl(Shape s, const char* filename, float resolution)
 {
-    return mucadcpp_write_stl(s, filename);
+    return mucadcpp_write_stl(s, filename, resolution);
 }
 
 int mucad_write_iges(Shape s, const char* filename)

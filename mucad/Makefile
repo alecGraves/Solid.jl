@@ -49,6 +49,10 @@ build/mucad_c.o: mucad_c.cpp
 build/test_box: test/test_box.c build/libmucad.a
 	$(CC) -std=c11 $(CFLAGS) $(CEXE) -o $@ $^
 
+build/test_loft: test/test_loft.c build/libmucad.a
+	$(CC) -std=c11 $(CFLAGS) $(CEXE) -o $@ $^
+
+
 build/test_basic: test/test_basic.c build/libmucad.a
 	$(CC) -std=c11 $(CFLAGS) $(CEXE) -o $@ $^
 
@@ -81,8 +85,8 @@ format:
 clean:
 	rm -rf build
 
-check: build/test build/test_all
-	./build/test
-	./build/test_all
+check: build/test_basic build/test_box
+	./build/test_box
+	./build/test_basic
 
 .PHONY: all clean check install uninstall format

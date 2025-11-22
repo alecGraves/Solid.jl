@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include "mucad.h"
 
-#define EPS 1e-2  /* tolerance for floating-point comparisons */
+#define EPS 1e-5  /* tolerance for floating-point comparisons */
 #define M_PI 3.14159265358979323846264338327950288419
 /* ------------------------------------------------------------------ */
 /*  Test routine - call from main() or a test harness.                */

@@ -46,7 +46,7 @@ Shape mucadcpp_face_from_wire(Shape wire);
 
 /* ---- mesh / export --------------------------------------------------- */
 int mucadcpp_write_step(Shape s,const char* filename);
-int mucadcpp_write_stl(Shape s,const char* filename);
+int mucadcpp_write_stl(Shape s,const char* filename, float resolution);
 int mucadcpp_write_iges(Shape s,const char* filename);
 int mucadcpp_write_obj(Shape s,const char* filename);
 

@@ -3,14 +3,7 @@
  *  Simple test program that uses the MUCAD API to create a box
  *  and export it as an STL file.
  *
- *  Compile (example):
- *      gcc -o test_box test_box.c -lmucad
- *
- *  Run:
- *      ./test_box
- *
- *  The program will produce a file named "box.stl" in the current
- *  directory.
+ *  The program will several box model files.
  */
 
 #include <stdio.h>
@@ -28,7 +21,7 @@ int main(void)
     }
 
     /* Write the shape to an STL file */
-    if (mucad_write_stl(box, "box.stl") != 0) {
+    if (mucad_write_stl(box, "box.stl", 0.1) != 0) {
         fprintf(stderr, "Error: could not write STL file.\n");
         return 1;
     }

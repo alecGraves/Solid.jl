@@ -407,174 +407,213 @@ Shape mucadcpp_revolve(Shape s, double ax, double ay, double az,
 
 
 // ----------------------------------------------------------------
-// HELPER: Build a Quadratic Edge from Start-Mid-End triplets
-// Uses your exact math to calculate the Control Pole
+// HELPER: Build Quadratic Edge (Start-Control-End)
 // ----------------------------------------------------------------
 TopoDS_Edge internal_make_quadratic_edge(const gp_Pnt& P0, const gp_Pnt& Pmid, const gp_Pnt& P2) {
-    // 1. Calculate Control Pole C1 for exact interpolation at t=0.5
-    // Formula: C1 = 2*Pmid - 0.5*P0 - 0.5*P2
+    // Calculates the Control Point C1 such that the curve passes EXACTLY through Pmid at t=0.5
     gp_Pnt C1;
     C1.SetX(2.0 * Pmid.X() - 0.5 * P0.X() - 0.5 * P2.X());
     C1.SetY(2.0 * Pmid.Y() - 0.5 * P0.Y() - 0.5 * P2.Y());
     C1.SetZ(2.0 * Pmid.Z() - 0.5 * P0.Z() - 0.5 * P2.Z());
 
-    // 2. Setup Arrays
     TColgp_Array1OfPnt poles(1, 3);
-    poles(1) = P0;
-    poles(2) = C1; 
-    poles(3) = P2;
+    poles(1) = P0; poles(2) = C1; poles(3) = P2;
 
     TColStd_Array1OfReal knots(1, 2);
-    knots(1) = 0.0;
-    knots(2) = 1.0;
+    knots(1) = 0.0; knots(2) = 1.0;
 
     TColStd_Array1OfInteger mults(1, 2);
-    mults(1) = 3; // Start mult
-    mults(2) = 3; // End mult
+    mults(1) = 3; mults(2) = 3;
 
-    // 3. Create Curve
     Handle(Geom_Curve) curve = new Geom_BSplineCurve(poles, knots, mults, 2);
-
-    // 4. Create Edge
     return BRepBuilderAPI_MakeEdge(curve).Edge();
 }
 
 // ----------------------------------------------------------------
-// HELPER: Sample Wire into (2*N + 1) points
+// HELPER: Rebuild Wire from Point Cloud
 // ----------------------------------------------------------------
-bool SampleWireForQuadratic(const TopoDS_Wire& wire, int targetEdges, std::vector<gp_Pnt>& outPoints) {
+TopoDS_Wire RebuildQuadraticWire(const std::vector<gp_Pnt>& points, bool closed) {
+    if (points.size() < 3) return TopoDS_Wire();
+    BRepBuilderAPI_MakeWire mkWire;
+    
+    // Iterate in triplets: 0-1-2, 2-3-4...
+    for (size_t i = 0; i < points.size() - 2; i += 2) {
+        mkWire.Add(internal_make_quadratic_edge(points[i], points[i+1], points[i+2]));
+    }
+
+    // Handle Loop Closure
+    if (closed) {
+        const gp_Pnt& pLast = points.back();
+        const gp_Pnt& pFirst = points.front();
+        // Only add closure segment if points are not coincident
+        if (pLast.SquareDistance(pFirst) > 1e-9) {
+            gp_Pnt pMid = pLast.Translated(gp_Vec(pLast, pFirst) * 0.5);
+            mkWire.Add(internal_make_quadratic_edge(pLast, pMid, pFirst));
+        }
+    }
+    return mkWire.Wire();
+}
+
+// ----------------------------------------------------------------
+// HELPER: Hybrid Edge/Curve Sampling
+// ----------------------------------------------------------------
+bool SampleWireHybrid(const TopoDS_Wire& wire, int targetTotalSegments, std::vector<gp_Pnt>& outPoints) {
     outPoints.clear();
     if (wire.IsNull()) return false;
 
-    // Total Length
+    // 1. Analyze Length
     double totalLength = 0.0;
-    TopExp_Explorer lenExp(wire, TopAbs_EDGE);
-    for (; lenExp.More(); lenExp.Next()) {
-        BRepAdaptor_Curve c(TopoDS::Edge(lenExp.Current()));
-        totalLength += GCPnts_AbscissaPoint::Length(c);
+    std::vector<TopoDS_Edge> edges;
+    std::vector<double> lengths;
+
+    TopExp_Explorer exp(wire, TopAbs_EDGE);
+    for (; exp.More(); exp.Next()) {
+        TopoDS_Edge edge = TopoDS::Edge(exp.Current());
+        edges.push_back(edge);
+        BRepAdaptor_Curve c(edge);
+        double len = GCPnts_AbscissaPoint::Length(c);
+        lengths.push_back(len);
+        totalLength += len;
     }
 
     if (totalLength < 1e-9) return false;
 
-    int totalIntervals = targetEdges * 2;
-    
-    TopExp_Explorer exp(wire, TopAbs_EDGE);
-    for (; exp.More(); exp.Next()) {
-        TopoDS_Edge edge = TopoDS::Edge(exp.Current());
-        BRepAdaptor_Curve curve(edge);
-        double edgeLen = GCPnts_AbscissaPoint::Length(curve);
+    // 2. Sample Edges
+    for (size_t i = 0; i < edges.size(); ++i) {
+        double len = lengths[i];
+        
+        // Calculate Segments (Intervals)
+        int numSegments = (int)((len / totalLength) * targetTotalSegments);
+        
+        // Enforce EVEN intervals (so corners are endpoints)
+        if (numSegments < 2) numSegments = 2; 
+        if (numSegments & 1) numSegments++;
 
-        // Distribute segments proportionally
-        int intervals = std::max(2, (int)((edgeLen / totalLength) * totalIntervals));
-        if (intervals % 2 != 0) intervals++; // Ensure even for Start-Mid-End pairs
-
-        GCPnts_UniformAbscissa sampler(curve, intervals + 1, 1e-6); 
+        BRepAdaptor_Curve curve(edges[i]);
+        
+        // Request (Segments + 1) Points to get 'numSegments' intervals
+        GCPnts_UniformAbscissa sampler(curve, numSegments + 1, 1e-6);
+        
         if (!sampler.IsDone()) return false;
 
-        int startIdx = (outPoints.empty()) ? 1 : 2; // Avoid duplicate vertices
-        for (int i = startIdx; i <= intervals + 1; ++i) {
-            outPoints.push_back(curve.Value(sampler.Parameter(i)));
+        // Append Points
+        int startK = (outPoints.empty()) ? 1 : 2; 
+        int maxK = sampler.NbPoints();
+
+        for (int k = startK; k <= maxK; ++k) {
+            outPoints.push_back(curve.Value(sampler.Parameter(k)));
         }
     }
     return true;
 }
 
-// ----------------------------------------------------------------
-// HELPER: Rebuild Wire using Quadratic Edges
-// ----------------------------------------------------------------
-TopoDS_Wire RebuildQuadraticWire(const std::vector<gp_Pnt>& points, bool closed) {
-    if (points.size() < 3) return TopoDS_Wire();
-
-    BRepBuilderAPI_MakeWire mkWire;
-    
-    // Iterate triplets: 0-1-2, 2-3-4, etc.
-    for (size_t i = 0; i < points.size() - 2; i += 2) {
-        mkWire.Add(internal_make_quadratic_edge(points[i], points[i+1], points[i+2]));
-    }
-
-    // Force closure if needed
-    if (closed) {
-        const gp_Pnt& pLast = points.back();
-        const gp_Pnt& pFirst = points.front();
-        if (pLast.SquareDistance(pFirst) > 1e-9) {
-            gp_Pnt pMid = pLast.Translated(gp_Vec(pLast, pFirst) * 0.5);
-            mkWire.Add(internal_make_quadratic_edge(pLast, pMid, pFirst));
-        }
-        // Note: If the loop is already geometrically closed, 
-        // BRepBuilderAPI_MakeWire usually handles the topology automatically.
-    }
-    
-    return mkWire.Wire();
-}
-
-// ----------------------------------------------------------------
-// MAIN FUNCTION
-// ----------------------------------------------------------------
 Shape mucadcpp_loft(const Shape* shapes, size_t n, bool solid, bool ruled) {
     if (!shapes || n < 2) return nullptr;
 
     try {
         std::vector<TopoDS_Wire> inputWires;
         int maxVerts = 0;
+        bool hasCurvature = false;
 
-        // 1. Extract Wires
+        // ---------------------------------------------------------
+        // 1. ANALYZE GEOMETRY
+        // ---------------------------------------------------------
         for (size_t i = 0; i < n; ++i) {
             TopoDS_Shape s = fromShape(shapes[i]);
             if (s.IsNull()) return nullptr;
-
-            TopoDS_Wire w;
-            if (s.ShapeType() == TopAbs_WIRE) w = TopoDS::Wire(s);
-            else {
+            
+            // Unwrap Faces/Solids
+            if (s.ShapeType() != TopAbs_WIRE) {
                 TopExp_Explorer exp(s, TopAbs_WIRE);
-                if (exp.More()) w = TopoDS::Wire(exp.Current());
-                else return nullptr; 
+                if (exp.More()) s = exp.Current();
             }
+
+            TopoDS_Wire w = TopoDS::Wire(s);
             inputWires.push_back(w);
             
-            // Estimate Complexity
+            // Count Vertices
             TopExp_Explorer expV(w, TopAbs_VERTEX);
             int vCount = 0;
             while(expV.More()) { vCount++; expV.Next(); }
             if (vCount > maxVerts) maxVerts = vCount;
+
+            // Check Curvature (Circle/Ellipse/BSpline)
+            TopExp_Explorer expE(w, TopAbs_EDGE);
+            for(; expE.More(); expE.Next()) {
+                BRepAdaptor_Curve bac(TopoDS::Edge(expE.Current()));
+                GeomAbs_CurveType type = bac.GetType();
+                if (type != GeomAbs_Line) {
+                    hasCurvature = true; 
+                }
+            }
         }
 
-        // 2. Resolution: 100 quadratic edges (200 sub-segments)
-        // High enough for accurate circle volume, robust enough for squares.
-        int targetEdges = std::max(16, maxVerts * 4); 
+        // ---------------------------------------------------------
+        // 2. DETERMINE RESOLUTION
+        // ---------------------------------------------------------
+        int targetSegments = 0;
+
+        if (hasCurvature) {
+            // High Res Mode: needed for Circles to maintain volume/area accuracy
+            targetSegments = 32; 
+        } else {
+            // Low Res Mode: Square -> Star
+            // Minimal segments to capture corners + minimal smoothing
+            targetSegments = std::max(16, maxVerts * 4);
+        }
 
         std::vector<gp_Pnt> prevCloud;
         
-        // 3. Setup Generator
-        BRepOffsetAPI_ThruSections generator(solid, ruled, 1.0e-05);
+        BRepOffsetAPI_ThruSections generator(solid, ruled, 1.0e-06);
         generator.CheckCompatibility(Standard_False); 
 
+        // ---------------------------------------------------------
+        // 3. PROCESS WIRES
+        // ---------------------------------------------------------
         for (size_t i = 0; i < n; ++i) {
             std::vector<gp_Pnt> currentCloud;
             bool isClosed = inputWires[i].Closed();
             
-            if (!SampleWireForQuadratic(inputWires[i], targetEdges, currentCloud)) return nullptr;
+            // Generate Cloud (Hybrid: Corner Preserving + Length Uniform)
+            if (!SampleWireHybrid(inputWires[i], targetSegments, currentCloud)) return nullptr;
 
-            // Simple Alignment
-            if (i > 0 && prevCloud.size() == currentCloud.size()) {
-                 size_t N = prevCloud.size();
+            // -----------------------------------------------------
+            // 4. OPTIMIZED SEAM ALIGNMENT
+            // -----------------------------------------------------
+            if (i > 0 && !prevCloud.empty()) {
+                 size_t N = currentCloud.size();
+                 gp_Pnt pTarget = prevCloud[0]; // Start of previous loop
+                 
                  double minD = 1e100; 
-                 int bestShift = 0;
-                 // Check even indices (vertices only)
+                 size_t bestShift = 0;
+                 
+                 // Check every EVEN index
+                 // (Must be even to preserve the Start-Control-End triplet phase)
                  for(size_t s=0; s<N; s+=2) {
-                     double d = 0;
-                     for(size_t k=0; k<N; k+=10) d += prevCloud[k].SquareDistance(currentCloud[(k+s)%N]);
-                     if(d < minD) { minD = d; bestShift = s; }
+                     double d = currentCloud[s].SquareDistance(pTarget);
+                     if(d < minD) { 
+                         minD = d; 
+                         bestShift = s; 
+                     }
                  }
+
+                 // Rotate Cloud
                  if (bestShift != 0) {
-                    std::vector<gp_Pnt> tmp = currentCloud;
-                    for(size_t k=0; k<N; ++k) currentCloud[k] = tmp[(k+bestShift)%N];
+                    std::vector<gp_Pnt> alignedCloud;
+                    alignedCloud.reserve(N);
+                    for(size_t k=0; k<N; ++k) {
+                        alignedCloud.push_back(currentCloud[(k + bestShift) % N]);
+                    }
+                    currentCloud = alignedCloud;
                  }
             }
+            
             prevCloud = currentCloud;
 
-            // Rebuild
+            // -----------------------------------------------------
+            // 5. REBUILD
+            // -----------------------------------------------------
             TopoDS_Wire cleanWire = RebuildQuadraticWire(currentCloud, isClosed);
-            
             if (cleanWire.IsNull()) return nullptr;
             generator.AddWire(cleanWire);
         }
@@ -583,7 +622,6 @@ Shape mucadcpp_loft(const Shape* shapes, size_t n, bool solid, bool ruled) {
         if (!generator.IsDone()) return nullptr;
 
         TopoDS_Shape result = generator.Shape();
-
         if (solid && result.ShapeType() == TopAbs_SOLID) {
              ShapeFix_Solid fix;
              fix.Init(TopoDS::Solid(result));
@@ -597,6 +635,7 @@ Shape mucadcpp_loft(const Shape* shapes, size_t n, bool solid, bool ruled) {
         return nullptr;
     }
 }
+
 
 
 // ----------------------------------------------------------------

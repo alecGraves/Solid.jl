@@ -1,0 +1,5 @@
+build/
+*.iges
+*.obj
+*.step
+*.stl

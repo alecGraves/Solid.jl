@@ -1,6 +1,6 @@
-// mucad.cpp - implements mucad.h using Open CASCADE
+// ccad.cpp - implements ccad.h using Open CASCADE
 
-#include "mucad.h"
+#include "ccad.h"
 
 // Standard C++ headers
 #include <algorithm>
@@ -125,7 +125,7 @@ static inline const TopoDS_Shape &fromShape(Shape s) {
 // ----------------------------------------------------------------
 // Cleanup (all returns)
 // ----------------------------------------------------------------
-void mucadcpp_free(Shape s) {
+void ccadcpp_free(Shape s) {
 	if(s) {
 		delete static_cast<TopoDS_Shape *>(s);
 	}
@@ -134,7 +134,7 @@ void mucadcpp_free(Shape s) {
 // ----------------------------------------------------------------
 // 2-D Primitives
 // ----------------------------------------------------------------
-Shape mucadcpp_circle(double cx, double cy, double radius) {
+Shape ccadcpp_circle(double cx, double cy, double radius) {
 	try {
 		// 1. Define the Axis (Position and Orientation)
 		gp_Pnt center(cx, cy, 0.0);
@@ -167,7 +167,7 @@ Shape mucadcpp_circle(double cx, double cy, double radius) {
 	} catch(...) { return nullptr; }
 }
 
-Shape mucadcpp_rectangle(double x1, double y1, double x2, double y2) {
+Shape ccadcpp_rectangle(double x1, double y1, double x2, double y2) {
 	try {
 		gp_Pnt p1(x1, y1, 0.0);
 		gp_Pnt p2(x2, y1, 0.0);
@@ -184,7 +184,7 @@ Shape mucadcpp_rectangle(double x1, double y1, double x2, double y2) {
 	} catch(...) { return nullptr; }
 }
 
-Shape mucadcpp_triangle(double x1, double y1, double x2, double y2, double x3, double y3) {
+Shape ccadcpp_triangle(double x1, double y1, double x2, double y2, double x3, double y3) {
 	try {
 		gp_Pnt p1(x1, y1, 0), p2(x2, y2, 0), p3(x3, y3, 0);
 		BRepBuilderAPI_MakeWire mkWire;
@@ -195,7 +195,7 @@ Shape mucadcpp_triangle(double x1, double y1, double x2, double y2, double x3, d
 	} catch(...) { return nullptr; }
 }
 
-Shape mucadcpp_polygon(const double *pts, size_t npts) {
+Shape ccadcpp_polygon(const double *pts, size_t npts) {
 	if(npts < 3) {
 		return nullptr;
 	}
@@ -213,14 +213,14 @@ Shape mucadcpp_polygon(const double *pts, size_t npts) {
 // ----------------------------------------------------------------
 // 3-D Primitives
 // ----------------------------------------------------------------
-Shape mucadcpp_sphere(double cx, double cy, double cz, double radius) {
+Shape ccadcpp_sphere(double cx, double cy, double cz, double radius) {
 	try {
 		gp_Pnt center(cx, cy, cz);
 		return toShape(BRepPrimAPI_MakeSphere(center, radius).Shape());
 	} catch(...) { return nullptr; }
 }
 
-Shape mucadcpp_box(double x1, double y1, double z1, double x2, double y2, double z2) {
+Shape ccadcpp_box(double x1, double y1, double z1, double x2, double y2, double z2) {
 	try {
 		gp_Pnt p1(x1, y1, z1);
 		gp_Pnt p2(x2, y2, z2);
@@ -231,7 +231,7 @@ Shape mucadcpp_box(double x1, double y1, double z1, double x2, double y2, double
 // ----------------------------------------------------------------
 // Transformations
 // ----------------------------------------------------------------
-Shape mucadcpp_translate(Shape s, double dx, double dy, double dz) {
+Shape ccadcpp_translate(Shape s, double dx, double dy, double dz) {
 	if(!s) {
 		return nullptr;
 	}
@@ -243,7 +243,7 @@ Shape mucadcpp_translate(Shape s, double dx, double dy, double dz) {
 	} catch(...) { return nullptr; }
 }
 
-Shape mucadcpp_rotate(Shape s, double ax, double ay, double az,
+Shape ccadcpp_rotate(Shape s, double ax, double ay, double az,
 		      double ux, double uy, double uz, double angle) {
 	if(!s) {
 		return nullptr;
@@ -257,7 +257,7 @@ Shape mucadcpp_rotate(Shape s, double ax, double ay, double az,
 	} catch(...) { return nullptr; }
 }
 
-Shape mucadcpp_transform(Shape s, const double mat[16]) {
+Shape ccadcpp_transform(Shape s, const double mat[16]) {
 	if(!s || !mat) {
 		return nullptr;
 	}
@@ -300,7 +300,7 @@ Shape mucadcpp_transform(Shape s, const double mat[16]) {
 	}
 }
 
-Shape mucadcpp_scale(Shape s, double sx, double sy, double sz) {
+Shape ccadcpp_scale(Shape s, double sx, double sy, double sz) {
 	if(!s) {
 		return nullptr;
 	}
@@ -323,7 +323,7 @@ Shape mucadcpp_scale(Shape s, double sx, double sy, double sz) {
 	}
 }
 
-Shape mucadcpp_mirror(Shape s, double ax, double ay, double az,
+Shape ccadcpp_mirror(Shape s, double ax, double ay, double az,
 		      double ux, double uy, double uz) {
 	if(!s) {
 		return nullptr;
@@ -346,7 +346,7 @@ Shape mucadcpp_mirror(Shape s, double ax, double ay, double az,
 // ----------------------------------------------------------------
 // Operations: Extrude, Sweep, Revolve, Loft
 // ----------------------------------------------------------------
-Shape mucadcpp_extrude(Shape shape2d, double ux, double uy, double uz) {
+Shape ccadcpp_extrude(Shape shape2d, double ux, double uy, double uz) {
 	if(!shape2d) {
 		return nullptr;
 	}
@@ -377,7 +377,7 @@ Shape mucadcpp_extrude(Shape shape2d, double ux, double uy, double uz) {
 //
 //  Returns the swept solid or nullptr on error.
 //
-Shape mucadcpp_sweep(Shape profile, Shape path) {
+Shape ccadcpp_sweep(Shape profile, Shape path) {
 	// --- 1. Basic sanity check ------------------------------------------------
 	if(!profile || !path) {
 		return nullptr;
@@ -427,7 +427,7 @@ Shape mucadcpp_sweep(Shape profile, Shape path) {
 	}
 }
 
-Shape mucadcpp_revolve(Shape s, double ax, double ay, double az,
+Shape ccadcpp_revolve(Shape s, double ax, double ay, double az,
 		       double ux, double uy, double uz, double angle) {
 	if(!s) {
 		return nullptr;
@@ -450,7 +450,7 @@ Shape mucadcpp_revolve(Shape s, double ax, double ay, double az,
 // Use BRepFill_CompatibleWires. This OCCT tool automatically
 // cuts edges (e.g., splits a circle into 4 arcs) to match the topology
 // of the target shape (e.g., a square) while preserving sharp vertices.
-Shape mucadcpp_loft(const Shape *shapes,
+Shape ccadcpp_loft(const Shape *shapes,
 		    size_t n,
 		    bool solid,
 		    bool ruled) {
@@ -546,7 +546,7 @@ Shape mucadcpp_loft(const Shape *shapes,
 // ----------------------------------------------------------------
 // Booleans
 // ----------------------------------------------------------------
-Shape mucadcpp_union(Shape a, Shape b) {
+Shape ccadcpp_union(Shape a, Shape b) {
 	if(!a || !b) {
 		return nullptr;
 	}
@@ -555,7 +555,7 @@ Shape mucadcpp_union(Shape a, Shape b) {
 	} catch(...) { return nullptr; }
 }
 
-Shape mucadcpp_difference(Shape a, Shape b) {
+Shape ccadcpp_difference(Shape a, Shape b) {
 	if(!a || !b) {
 		return nullptr;
 	}
@@ -590,7 +590,7 @@ Shape mucadcpp_difference(Shape a, Shape b) {
 //  // 5 points = 2 segments
 //  Shape fem_wire = occt_quadratic_spline_wire(nodes, 5);
 // -----------------------------------------------------------------
-Shape mucadcpp_quadratic_spline_wire(const double *pts, size_t npts) {
+Shape ccadcpp_quadratic_spline_wire(const double *pts, size_t npts) {
 	// We need at least 3 points (1 segment) and an odd number of points
 	// to maintain the Start-Mid-End chain continuity.
 	if(!pts || npts < 3 || (npts % 2 == 0)) {
@@ -650,7 +650,7 @@ Shape mucadcpp_quadratic_spline_wire(const double *pts, size_t npts) {
 	}
 }
 
-Shape mucadcpp_face_from_wire(Shape wire) {
+Shape ccadcpp_face_from_wire(Shape wire) {
 	if(!wire) {
 		return nullptr;
 	}
@@ -750,7 +750,7 @@ TopoDS_Shape FillHole(const TopoDS_Wire &wire) {
 }
 
 //// Simplify to Solid: fill holes and return solid
-Shape mucadcpp_simplify_to_solid(const Shape s) {
+Shape ccadcpp_simplify_to_solid(const Shape s) {
 	if(!s) {
 		return nullptr;
 	}
@@ -853,7 +853,7 @@ Shape mucadcpp_simplify_to_solid(const Shape s) {
 }
 
 //// Simplify: basic unify
-Shape mucadcpp_simplify(const Shape s) {
+Shape ccadcpp_simplify(const Shape s) {
 	// return s;
 	// OSD::SetSignal(Standard_True);
 	if(!s) {
@@ -888,7 +888,7 @@ Shape mucadcpp_simplify(const Shape s) {
 // ----------------------------------------------------------------
 // Analysis
 // ----------------------------------------------------------------
-int mucadcpp_bounding_sphere(Shape s, double *x, double *y, double *z, double *r) {
+int ccadcpp_bounding_sphere(Shape s, double *x, double *y, double *z, double *r) {
 	if(!s || !x || !y || !z || !r) {
 		return -1;
 	}
@@ -925,7 +925,7 @@ int mucadcpp_bounding_sphere(Shape s, double *x, double *y, double *z, double *r
 	} catch(...) { return -1; }
 }
 
-double mucadcpp_volume(Shape s) {
+double ccadcpp_volume(Shape s) {
 	if(!s) {
 		return 0.0;
 	}
@@ -936,7 +936,7 @@ double mucadcpp_volume(Shape s) {
 	} catch(...) { return 0.0; }
 }
 
-double mucadcpp_surface_area(Shape s) {
+double ccadcpp_surface_area(Shape s) {
 	if(!s) {
 		return 0.0;
 	}
@@ -947,7 +947,7 @@ double mucadcpp_surface_area(Shape s) {
 	} catch(...) { return 0.0; }
 }
 
-int mucadcpp_centroid(Shape s, double *cx, double *cy, double *cz) {
+int ccadcpp_centroid(Shape s, double *cx, double *cy, double *cz) {
 	if(!s || !cx || !cy || !cz) {
 		return -1;
 	}
@@ -983,7 +983,7 @@ int mucadcpp_centroid(Shape s, double *cx, double *cy, double *cz) {
 	} catch(...) { return -1; }
 }
 
-int mucadcpp_inertia(Shape s, double density,
+int ccadcpp_inertia(Shape s, double density,
 		     double *Ixx, double *Iyy, double *Izz) {
 	if(!s || !Ixx || !Iyy || !Izz) {
 		return -1;
@@ -1021,7 +1021,7 @@ int mucadcpp_inertia(Shape s, double density,
 // 7 EDGE
 // 8 VERTEX
 // 9 SHAPE
-int mucadcpp_shape_type(Shape s) {
+int ccadcpp_shape_type(Shape s) {
 	TopoDS_Shape shape = fromShape(s);
 	if(shape.IsNull()) {
 		return -1; // invalid or null shape
@@ -1034,7 +1034,7 @@ int mucadcpp_shape_type(Shape s) {
 // ----------------------------------------------------------------
 // I/O and Cleanup
 // ----------------------------------------------------------------
-int mucadcpp_write_step(Shape s, const char *filename) {
+int ccadcpp_write_step(Shape s, const char *filename) {
 	if(!s || !filename) {
 		return -1;
 	}
@@ -1045,7 +1045,7 @@ int mucadcpp_write_step(Shape s, const char *filename) {
 	} catch(...) { return -1; }
 }
 
-int mucadcpp_write_stl(Shape s, const char *filename, float resolution) {
+int ccadcpp_write_stl(Shape s, const char *filename, float resolution) {
 	if(!s || !filename) {
 		return -1;
 	}
@@ -1069,7 +1069,7 @@ int mucadcpp_write_stl(Shape s, const char *filename, float resolution) {
 	}
 }
 
-int mucadcpp_write_iges(Shape s, const char *filename) {
+int ccadcpp_write_iges(Shape s, const char *filename) {
 	if(!s || !filename) {
 		return -1;
 	}
@@ -1086,7 +1086,7 @@ int mucadcpp_write_iges(Shape s, const char *filename) {
 	} catch(...) { return -1; }
 }
 
-int mucadcpp_write_obj(Shape s, const char *filename, float resolution) {
+int ccadcpp_write_obj(Shape s, const char *filename, float resolution) {
 	if(!s || !filename) {
 		return -1;
 	}
@@ -1105,7 +1105,7 @@ int mucadcpp_write_obj(Shape s, const char *filename, float resolution) {
 			return -1;
 		}
 
-		file << "# Generated by mucadcpp/OCCT Wrapper\n";
+		file << "# Generated by ccadcpp/OCCT Wrapper\n";
 		file << std::fixed << std::setprecision(6);
 
 		// OBJ indices are global and 1-based. We must track offsets per face.

@@ -77,7 +77,7 @@ struct SampledWire {
 // ----------------------------------------------------------------
 // MAIN FUNCTION
 // ----------------------------------------------------------------
-Shape mucad_loft_robust(const Shape *shapes, size_t n, bool solid, bool ruled) {
+Shape ccad_loft_robust(const Shape *shapes, size_t n, bool solid, bool ruled) {
 
 	if(!shapes || n < 2) {
 		return nullptr;

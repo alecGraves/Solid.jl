@@ -67,15 +67,7 @@ int ccad_inertia(Shape s, double density,
 		  double *Ixx, double *Iyy, double *Izz);
 
 // Enumerator
-// 1 Compound
-// 2 Compsolid
-// 3 Solid
-// 4 Shell
-// 5 Face
-// 6 Wire
-// 7 Edge
-// 8 Vertex
-// 9 Shape
+// 0 = Edge, 1 = Wire, 2 = Face, 3 = Solid, 4 = Other
 int ccad_shape_type(Shape s);
 
 /* ---- cleanup -------------------------------------------------------- */

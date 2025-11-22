@@ -1012,23 +1012,20 @@ int ccadcpp_inertia(Shape s, double density,
 }
 
 // Enumerator
-// 1 COMPOUND
-// 2 COMPSOLID
-// 3 SOLID
-// 4 SHELL
-// 5 FACE
-// 6 WIRE
-// 7 EDGE
-// 8 VERTEX
-// 9 SHAPE
+// 0 = Edge, 1 = Wire, 2 = Face, 3 = Solid, 4 = Other
 int ccadcpp_shape_type(Shape s) {
-	TopoDS_Shape shape = fromShape(s);
-	if(shape.IsNull()) {
-		return -1; // invalid or null shape
-	}
+    TopoDS_Shape shape = fromShape(s);
+    if (shape.IsNull()) {
+        return -1;   // invalid or null shape
+    }
 
-	// Return the OCCT TopAbs shape type as an integer.
-	return static_cast<int>(shape.ShapeType());
+    switch (shape.ShapeType()) {
+        case TopAbs_EDGE:   return 0;
+        case TopAbs_WIRE:   return 1;
+        case TopAbs_FACE:   return 2;
+        case TopAbs_SOLID:  return 3;
+        default:            return 4;   // any other TopAbs type
+    }
 }
 
 // ----------------------------------------------------------------

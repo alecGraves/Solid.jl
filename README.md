@@ -1,42 +1,81 @@
 # Solid.jl
 
-A Julia CAD and FEM code library for Julia.
+![Finite Element Method Example Deformation](assets/fem.png)
 
+*Solid.jl* is an open-source Julia library that brings together Computer-Aided Design (CAD) and the Finite Element Method (FEM).
+It provides a clean, high-performance interface for building, solving, and post-processing 1-D/2-D structural and thermal problems, with a roadmap targeting 3-D mechanics, fluid flow, and advanced topology optimization.
 
-There are several key steps to the finite element method:
+---
 
-1. Preprocessing:
-	1. Element selection
-	2. Meshing / discretization
-2. Analysis:
-	1. Element formulation, conversion to weak form, numerical integration
-	2. Assembly
-	3. Solution
-3. Post-processing:
-	1. Quantify targets (stress, strain, etc.) based on the solution (displacemnet, heat, etc.)
-	2. Visualization
+## Overview
 
-so
-optimization:
+Finite-element analysis follows three high-level stages:
 
-1. Create a static array and use that for matrix construction (200ms -> 10ms)
-2. Convert that static Kg into a sparse matrix (cost 10ms)
-3. Solve using the sparse matrix (750ms -> 10ms)
-4. use static arrays, hunt and eliminate numerous small matrix heap allocations during element matrix construction, force generation, and post-processing.
+1. **Pre-processing** - define geometry, choose element types, and generate a mesh.
+2. **Analysis** - formulate element matrices, assemble a global system of equations, and solve for the unknown fields.
+3. **Post-processing** - evaluate derived quantities (stress, temperature, etc.) and visualize results.
 
-try gpu parallelizing things too?
-- this is useful for larger solves and matrix construction
-- under 10k nodes, probably better to just use cpu, or try to parallelize matrix construction.
-- Need to test how useful it is for nodes vs solving, construction methods, etc.
-- Element matrix and force integration using it would probably be pretty quick.
+Solid.jl implements all three stages in a Julia-native way, supporting sparse matrices for efficient solvers with upcoming experimental GPU support for large-scale problems.
 
+---
 
-## TODO
-- [ ] 2D elements
-- [ ] 3D elements
-- [ ] 2D heat
-- [ ] 3D heat
+## Features
 
-Biggest win: 
-- automatic mesh creation and alignment, optimizing element selection.
+- **Structural mechanics** - gauss quadrature integration for 1-D truss/beam, 2-D plane stress & plane strain
+- **Thermal analysis** - gauss quadrature for 1-D heat conduction
+- **Topology optimization** - 2-D stress-based pruning
+- **High-performance assembly** - static-array element matrices + cheap dense->sparse conversion
+- **Solver integration** - direct sparse solvers (todo, gpu acceleration)
+- **Extensible architecture** - add new element types (3-D, fluid flow) with minimal boilerplate
 
+---
+
+## Performance tips
+
+| Step | Dense | Sparse |
+|------|-----------------------------------|--------------------------|
+| Element matrix construction | ~10 ms | ~200 ms |
+| Dense -> sparse conversion   | - | ~10 ms |
+| Direct solve (LU)           | ~750 ms | ~10 ms |
+| GPU-accelerated integration + sparse solving (experimental) | - | TBD |
+
+---
+
+## Roadmap
+
+✅ Completed
+- [x] 1-D structural
+- [x] 2-D structural
+- [x] 1-D heat
+- [x] 2-D heat
+- [x] 2-D topology optimization (prune low-stress)
+
+🚧 In progress / Planned
+- [ ] leverage `StaticArrays.jl` for fast per-element operations
+- [ ] Turbo-accelerated element matrix construction
+- [ ] GPU accelerated sparse solving
+- [ ] 3-D structural
+- [ ] 3-D hydraulic flows
+- [ ] Non-linear iteration
+- [ ] GPU accelerated element matrix construction
+- [ ] Adjoint / hyper-complex differentiation for gradients
+- [ ] Automatic 2D/3D mesh generation
+- [ ] HDG solver for fluid flows
+- [ ] Structure-fluid interactions
+- [ ] Generative design via evolutionary algorithm / MCTS
+
+---
+
+## Contributing
+
+We welcome contributions of any kind-bug reports, documentation improvements, new element formulations, or performance enhancements.
+
+---
+
+## License
+
+Solid.jl is released under the **AGPLv3 License**. See the `LICENSE` file for the full text.
+
+---
+
+*Enjoy building fast, flexible FEM simulations with Julia!*

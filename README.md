@@ -30,6 +30,16 @@ Solid.jl implements all three stages in a Julia-native way, supporting sparse ma
 
 ---
 
+## Project Structure
+
+- mesh.jl - Contains tools for generating meshes and working with meshes, such as building meshes using rectangles or quadrilateral regions, or finding the nearest node to a physical coordinate.
+- plot.jl - Contains Makie (Julia plotting library) code for generating plots
+- shapes.jl - Contains shape functions and jacobins.
+- integration.jl - Contains code for gauss quadrature integration and related functions
+- solve.jl - Contains the solving function for computing displacements and reaction forces.
+
+---
+
 ## Performance tips
 
 | Step | Dense | Sparse |
